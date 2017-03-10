@@ -27,7 +27,7 @@ function stanford_webform_helper_sftp_form($form, &$form_state, $node) {
   $form['enabled'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enable SFTP Upload'),
-    '#default_value' => variable_get('stanford_webform_helpers_sftp_enabled', 0),
+    '#default_value' => $webform_settings['enabled'],
   );
   $form['sftp_settings'] = array(
     '#type' => 'fieldset',
@@ -42,17 +42,11 @@ function stanford_webform_helper_sftp_form($form, &$form_state, $node) {
     '#type' => 'textfield',
     '#title' => t('Username'),
     '#default_value' => $webform_settings['username'],
-    '#attributes' => array(
-      'autocomplete' => 'off',
-    ),
   );
   $form['sftp_settings']['password'] = array(
     '#type' => 'password',
     '#title' => t('Password'),
     '#default_value' => '',
-    '#attributes' => array(
-      'autocomplete' => 'off',
-    ),
   );
   if ($webform_settings['password']) {
     $form['sftp_settings']['password']['#attributes']['placeholder'] = t('Already Entered');
