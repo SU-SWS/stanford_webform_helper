@@ -9,11 +9,6 @@
  * SFTP Configuration form.
  */
 function stanford_webform_helper_sftp_form($form, &$form_state, $node) {
-  if (!function_exists('ssh2_connect')) {
-    drupal_set_message(t('SSH2 plugin is not available'), 'error');
-    return $form;
-  }
-
   $form_state['node'] = $node;
   $sftp = variable_get('stanford_webform_helper_sftp', array());
   $webform_settings = array(

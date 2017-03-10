@@ -5,6 +5,8 @@
  * stanford_webform_helper.module
  */
 
+use \phpseclib\Net\SFTP;
+
 /**
  * Implements hook_menu().
  */
@@ -39,7 +41,7 @@ function stanford_webform_helper_node_delete($node) {
  */
 function stanford_webform_helper_webform_submission_insert($node, $submission) {
   $sftp = variable_get('stanford_webform_helper_sftp', array());
-  if (!function_exists('ssh2_connect') || !isset($sftp[$node->nid]) || !$sftp[$node->nid]['enabled']) {
+  if (!isset($sftp[$node->nid]) || !$sftp[$node->nid]['enabled']) {
     return;
   }
 
@@ -94,7 +96,7 @@ function stanford_webform_helper_webform_submission_update($node, $submission) {
  * @return bool
  *   If successful.
  */
-function stanford_webform_helper_upload_file($file, $connection_info, $nid) {
+function stanford_webform_helper_upload_file($file, array $connection_info, $nid) {
   $remote = basename($file);
   $dir = $connection_info['directory'];
   $remote_file = "$dir/$remote";
@@ -104,15 +106,13 @@ function stanford_webform_helper_upload_file($file, $connection_info, $nid) {
   $username = $connection_info['username'];
   $password = decrypt(serialize($connection_info['password']));
 
-  $connection = ssh2_connect($host, $port);
-  if (!ssh2_auth_password($connection, $username, $password)) {
-    watchdog('stanford_webform_helper', 'Failed connecting to SFTP server: !host on webform !nid', array(
-      '!host' => $host,
-      '!nid' => $nid,
-    ), WATCHDOG_ERROR);
-    return FALSE;
+
+  $sftp = new SFTP($host, $port);
+  if (!$sftp->login($username, $password)) {
+    watchdog('stanford_webform_helper', 'Login Failed. node: !nid', array('!nid' => $nid));
   }
-  if (ssh2_scp_send($connection, $file, $remote_file)) {
+
+  if ($sftp->put($remote_file, file_get_contents($file), NET_SFTP_LOCAL_FILE)) {
     return TRUE;
   }
   return FALSE;

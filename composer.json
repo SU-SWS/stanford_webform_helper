@@ -1,0 +1,10 @@
+{
+  "name": "su-sws/stanford_webform_helper",
+  "description": "Adds additional functionality to webforms.",
+  "type": "stanford-module",
+  "license": "GPL-2.0+",
+  "minimum-stability": "dev",
+  "require": {
+    "phpseclib/phpseclib": " ~2.0"
+  }
+}
