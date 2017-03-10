@@ -24,6 +24,17 @@ function stanford_webform_helper_menu() {
 }
 
 /**
+ * Implements hook_node_delete().
+ */
+function stanford_webform_helper_node_delete($node) {
+  $sftp = variable_get('stanford_webform_helper_sftp', array());
+  if (isset($sftp[$node->nid])) {
+    unset($sftp[$node->nid]);
+    variable_set('stanford_webform_helper_sftp', $sftp);
+  }
+}
+
+/**
  * Implements hook_webform_submission_insert().
  */
 function stanford_webform_helper_webform_submission_insert($node, $submission) {
