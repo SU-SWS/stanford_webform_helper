@@ -39,7 +39,7 @@ function stanford_webform_helper_node_delete($node) {
  */
 function stanford_webform_helper_webform_submission_insert($node, $submission) {
   $sftp = variable_get('stanford_webform_helper_sftp', array());
-  if (!isset($sftp[$node->nid]) || !$sftp[$node->nid]['enabled']) {
+  if (!function_exists('ssh2_connect') || !isset($sftp[$node->nid]) || !$sftp[$node->nid]['enabled']) {
     return;
   }
 
