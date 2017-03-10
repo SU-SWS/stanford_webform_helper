@@ -1,0 +1,5 @@
+name = Stanford Webform Helper
+description = Adds additional functionality to webforms
+core = 7.x
+version = 7.x-1.x
+dependencies[] = webform

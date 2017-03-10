@@ -1,0 +1,108 @@
+<?php
+
+/**
+ * @file
+ * stanford_webform_helper.module
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function stanford_webform_helper_menu() {
+  $items = array();
+  $items['node/%webform_menu/webform/ftp'] = array(
+    'title' => 'SFTP Results',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('stanford_webform_helper_sftp_form', 1),
+    'access callback' => 'webform_node_update_access',
+    'access arguments' => array(1),
+    'file' => 'stanford_webform_helper.forms.inc',
+    'weight' => 7,
+    'type' => MENU_LOCAL_TASK,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_webform_submission_insert().
+ */
+function stanford_webform_helper_webform_submission_insert($node, $submission) {
+  $sftp = variable_get('stanford_webform_helper_sftp', array());
+  if (!isset($sftp[$node->nid]) || !$sftp[$node->nid]['enabled']) {
+    return;
+  }
+
+  $csv_data = array();
+  $webform = $node->webform;
+  foreach ($submission->data as $component_id => $value) {
+    $form_key = $webform['components'][$component_id]['form_key'];
+    $csv_data[$form_key] = implode('; ', $value);
+
+    if ($webform['components'][$component_id]['type'] == 'file' && $value) {
+      if ($file = file_load(reset($value))) {
+        $csv_data[$form_key] = file_create_url($file->uri);
+      }
+    }
+  }
+  if (!array_filter($csv_data)) {
+    return;
+  }
+
+  $file_path = 'public://webform_submission_' . $submission->sid . '_' . $submission->submitted . '.csv';
+  $file = fopen($file_path, 'w+');
+  fputcsv($file, array_keys($csv_data));
+  fputcsv($file, $csv_data);
+  fclose($file);
+
+  if (stanford_webform_helper_upload_file($file_path, $sftp[$node->nid], $node->nid)) {
+    watchdog('stanford_webform_helper', 'Successfully uploaded csv to SFTP server on webform !nid', array('!nid' => $node->nid));
+  }
+  else {
+    watchdog('stanford_webform_helper', 'Failed uploading csv to SFTP server on webform !nid', array('!nid' => $node->nid), WATCHDOG_ERROR);
+  }
+  file_unmanaged_delete($file_path);
+}
+
+/**
+ * Implements hook_webform_submission_update().
+ */
+function stanford_webform_helper_webform_submission_update($node, $submission) {
+  stanford_webform_helper_webform_submission_insert($node, $submission);
+}
+
+/**
+ * Upload the given file to the configured SFTP server.
+ *
+ * @param string $file
+ *   The local file to upload.
+ * @param array $connection_info
+ *   Keyed array of the username, password, etc for the SFTP connection.
+ * @param int $nid
+ *   The node id of the webform being used.
+ *
+ * @return bool
+ *   If successful.
+ */
+function stanford_webform_helper_upload_file($file, $connection_info, $nid) {
+  $remote = basename($file);
+  $dir = $connection_info['directory'];
+  $remote_file = "$dir/$remote";
+
+  $host = $connection_info['sftp'];
+  $port = $connection_info['port'];
+  $username = $connection_info['username'];
+  $password = decrypt(serialize($connection_info['password']));
+
+  $connection = ssh2_connect($host, $port);
+  if (!ssh2_auth_password($connection, $username, $password)) {
+    watchdog('stanford_webform_helper', 'Failed connecting to SFTP server: !host on webform !nid', array(
+      '!host' => $host,
+      '!nid' => $nid,
+    ), WATCHDOG_ERROR);
+    return FALSE;
+  }
+  if (ssh2_scp_send($connection, $file, $remote_file)) {
+    return TRUE;
+  }
+  return FALSE;
+}

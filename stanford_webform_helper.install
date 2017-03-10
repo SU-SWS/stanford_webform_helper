@@ -1,0 +1,13 @@
+<?php
+
+/**
+ * @file
+ * stanford_webform_helper.install
+ */
+
+/**
+ * Implements hook_uninstall().
+ */
+function stanford_webform_helper_uninstall() {
+  variable_del('stanford_webform_helper_sftp');
+}
