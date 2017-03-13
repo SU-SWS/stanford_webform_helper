@@ -101,24 +101,21 @@ function stanford_webform_helper_sftp_form_validate($form, &$form_state) {
     if (isset($original_settings[$form_state['node']->nid])) {
       $original_settings = $original_settings[$form_state['node']->nid];
     }
+    $required_fields = array(
+      'username' => t('Username'),
+      'sftp' => t('SFTP Host'),
+      'directory' => t('Remote Directory'),
+      'port' => t('Port'),
+      'filename' => t('File Name'),
+    );
+    foreach ($required_fields as $name => $label) {
+      if (!$values[$name]) {
+        form_set_error($name, t('!label field is required', array('!label' => $label)));
+      }
+    }
 
-    if (!$values['username']) {
-      form_set_error('username', t('Username field is required'));
-    }
-    if (!$values['password'] && !isset($original_settings['password'])) {
+    if (!isset($original_settings['password']) && !$values['password']) {
       form_set_error('password', t('Password field is required'));
-    }
-    if (!$values['sftp']) {
-      form_set_error('sftp', t('SFTP Host field is required'));
-    }
-    if (!$values['directory']) {
-      form_set_error('directory', t('Remote Directory field is required'));
-    }
-    if (!$values['port']) {
-      form_set_error('port', t('Port field is required'));
-    }
-    if (!$values['filename']) {
-      form_set_error('filename', t('File Name field is required'));
     }
   }
 
