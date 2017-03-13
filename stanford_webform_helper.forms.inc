@@ -9,6 +9,12 @@
  * SFTP Configuration form.
  */
 function stanford_webform_helper_sftp_form($form, &$form_state, $node) {
+  $dir = 'public://webform';
+  if (!file_prepare_directory($dir, FILE_CREATE_DIRECTORY)) {
+    drupal_set_message(t('Unable to create directory !dir', array('!dir' => $dir)), 'error');
+    return;
+  }
+
   $form_state['node'] = $node;
   $sftp = variable_get('stanford_webform_helper_sftp', array());
   $webform_settings = array(
@@ -57,10 +63,6 @@ function stanford_webform_helper_sftp_form($form, &$form_state, $node) {
     '#title' => t('SFTP Host'),
     '#default_value' => $webform_settings['sftp'],
   );
-  $form['token_help'] = array(
-    '#theme' => 'token_tree',
-    '#token_types' => array('submission'),
-  );
   $form['sftp_settings']['port'] = array(
     '#type' => 'textfield',
     '#title' => t('Port'),
@@ -77,6 +79,10 @@ function stanford_webform_helper_sftp_form($form, &$form_state, $node) {
     '#title' => t('filename'),
     '#description' => t('Name of the file to create on the SFTP server excluding the file extension.'),
     '#default_value' => $webform_settings['filename'],
+  );
+  $form['sftp_settings']['token_help'] = array(
+    '#theme' => 'token_tree',
+    '#token_types' => array('submission'),
   );
   $form['save'] = array(
     '#type' => 'submit',
