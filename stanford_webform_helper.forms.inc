@@ -17,6 +17,7 @@ function stanford_webform_helper_sftp_form($form, &$form_state, $node) {
     'password' => '',
     'sftp' => '',
     'directory' => '',
+    'filename' => 'webform_[submission:sid]_[submission:date:raw]',
     'port' => '22',
   );
   if (isset($sftp[$node->nid])) {
@@ -56,16 +57,26 @@ function stanford_webform_helper_sftp_form($form, &$form_state, $node) {
     '#title' => t('SFTP Host'),
     '#default_value' => $webform_settings['sftp'],
   );
+  $form['token_help'] = array(
+    '#theme' => 'token_tree',
+    '#token_types' => array('submission'),
+  );
+  $form['sftp_settings']['port'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Port'),
+    '#default_value' => $webform_settings['port'],
+  );
   $form['sftp_settings']['directory'] = array(
     '#type' => 'textfield',
     '#title' => t('Remote Directory'),
     '#description' => t('Path on the SFTP server to upload the file. No trailing slash.'),
     '#default_value' => $webform_settings['directory'],
   );
-  $form['sftp_settings']['port'] = array(
+  $form['sftp_settings']['filename'] = array(
     '#type' => 'textfield',
-    '#title' => t('Port'),
-    '#default_value' => $webform_settings['port'],
+    '#title' => t('filename'),
+    '#description' => t('Name of the file to create on the SFTP server excluding the file extension.'),
+    '#default_value' => $webform_settings['filename'],
   );
   $form['save'] = array(
     '#type' => 'submit',
@@ -81,6 +92,10 @@ function stanford_webform_helper_sftp_form_validate($form, &$form_state) {
   $values = $form_state['values'];
   if ($values['enabled']) {
     $original_settings = variable_get('stanford_webform_helper_sftp', array());
+    if (isset($original_settings[$form_state['node']->nid])) {
+      $original_settings = $original_settings[$form_state['node']->nid];
+    }
+
     if (!$values['username']) {
       form_set_error('username', t('Username field is required'));
     }
@@ -95,6 +110,9 @@ function stanford_webform_helper_sftp_form_validate($form, &$form_state) {
     }
     if (!$values['port']) {
       form_set_error('port', t('Port field is required'));
+    }
+    if (!$values['filename']) {
+      form_set_error('filename', t('File Name field is required'));
     }
   }
 
@@ -118,6 +136,7 @@ function stanford_webform_helper_sftp_form_submit($form, &$form_state) {
     'sftp' => $form_state['values']['sftp'],
     'port' => $form_state['values']['port'],
     'directory' => $form_state['values']['directory'],
+    'filename' => $form_state['values']['filename'],
   );
   if ($form_state['values']['password']) {
     $webform_settings['password'] = unserialize(encrypt($form_state['values']['password']));
