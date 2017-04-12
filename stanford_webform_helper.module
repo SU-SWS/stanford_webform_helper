@@ -109,12 +109,9 @@ function stanford_webform_helper_upload_file($file, array $connection_info, $nid
 
   if ($connection_info['ftp']) {
     // Establish connection.
-    watchdog('mytest', "$host, $port, $username, $password");
     if ($ftp_conn = ftp_ssl_connect($host, $port, 30)) {
-      watchdog('mytest', "$host, $port, $username, $password");
-      watchdog('mytest', var_export($ftp_conn, true));
+      ftp_pasv($ftp_conn, TRUE);
       if (ftp_login($ftp_conn, $username, $password)) {
-        ftp_pasv($ftp_conn, TRUE);
 
         // Send the file.
         if (ftp_put($ftp_conn, $remote_file, drupal_realpath($file), FTP_ASCII)) {
