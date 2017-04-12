@@ -155,4 +155,5 @@ function stanford_webform_helper_sftp_form_submit($form, &$form_state) {
 
   $sftp[$form_state['node']->nid] = $webform_settings;
   variable_set('stanford_webform_helper_sftp', $sftp);
+  drupal_set_message(t('Settings Saved'));
 }
