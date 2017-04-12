@@ -18,6 +18,7 @@ function stanford_webform_helper_sftp_form($form, &$form_state, $node) {
   $form_state['node'] = $node;
   $sftp = variable_get('stanford_webform_helper_sftp', array());
   $webform_settings = array(
+    'ftp' => 0,
     'enabled' => 0,
     'username' => '',
     'password' => '',
@@ -44,6 +45,12 @@ function stanford_webform_helper_sftp_form($form, &$form_state, $node) {
         ':input[name="enabled"]' => array('checked' => TRUE),
       ),
     ),
+  );
+  $form['sftp_settings']['ftp'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use Standard FTP'),
+    '#description' => t('If SFTP is not supported, try FTP protocols'),
+    '#default_value' => $webform_settings['ftp'],
   );
   $form['sftp_settings']['username'] = array(
     '#type' => 'textfield',
@@ -133,6 +140,7 @@ function stanford_webform_helper_sftp_form_submit($form, &$form_state) {
     $old_password = $sftp[$form_state['node']->nid]['password'];
   }
   $webform_settings = array(
+    'ftp' => $form_state['values']['ftp'],
     'enabled' => $form_state['values']['enabled'],
     'username' => $form_state['values']['username'],
     'password' => $old_password,

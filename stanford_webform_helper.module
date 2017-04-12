@@ -98,8 +98,6 @@ function stanford_webform_helper_webform_submission_update($node, $submission) {
  *   If successful.
  */
 function stanford_webform_helper_upload_file($file, array $connection_info, $nid) {
-  require_once 'vendor/autoload.php';
-
   $remote = basename($file);
   $dir = $connection_info['directory'];
   $remote_file = "$dir/$remote";
@@ -109,13 +107,41 @@ function stanford_webform_helper_upload_file($file, array $connection_info, $nid
   $username = $connection_info['username'];
   $password = decrypt(serialize($connection_info['password']));
 
-  $sftp = new SFTP($host, $port);
-  if (!$sftp->login($username, $password)) {
-    watchdog('stanford_webform_helper', 'Login Failed. node: !nid', array('!nid' => $nid));
+  if ($connection_info['ftp']) {
+    // Establish connection.
+    $ftp_conn = ftp_ssl_connect($host, $port);
+    if (ftp_login($ftp_conn, $username, $password)) {
+      ftp_pasv($ftp_conn, TRUE);
+
+      // Send the file.
+      if (ftp_put($ftp_conn, $remote_file, drupal_realpath($file), FTP_ASCII)) {
+        ftp_close($ftp_conn);
+        return TRUE;
+      }
+    }
+    else {
+      watchdog('stanford_webform_helper', 'Login Failed. node: !nid', array('!nid' => $nid));
+    }
+    // Close the connection.
+    ftp_close($ftp_conn);
+  }
+  else {
+    require_once 'vendor/autoload.php';
+
+    // Establish connection.
+    $sftp = new SFTP($host, $port);
+    if ($sftp->login($username, $password)) {
+
+      // Send the file.
+      if ($sftp->put($remote_file, file_get_contents($file), NET_SFTP_LOCAL_FILE)) {
+        return TRUE;
+      }
+    }
+    else {
+      watchdog('stanford_webform_helper', 'Login Failed. node: !nid', array('!nid' => $nid));
+    }
+
   }
 
-  if ($sftp->put($remote_file, file_get_contents($file), NET_SFTP_LOCAL_FILE)) {
-    return TRUE;
-  }
   return FALSE;
 }
