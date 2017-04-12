@@ -109,6 +109,7 @@ function stanford_webform_helper_upload_file($file, array $connection_info, $nid
 
   if ($connection_info['ftp']) {
     // Establish connection.
+    watchdog('mytest', "$host, $port, $username, $password");
     if ($ftp_conn = ftp_ssl_connect($host, $port, 30)) {
       if (ftp_login($ftp_conn, $username, $password)) {
         ftp_pasv($ftp_conn, TRUE);
