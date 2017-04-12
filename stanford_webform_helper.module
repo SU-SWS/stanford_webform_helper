@@ -109,21 +109,28 @@ function stanford_webform_helper_upload_file($file, array $connection_info, $nid
 
   if ($connection_info['ftp']) {
     // Establish connection.
-    $ftp_conn = ftp_ssl_connect($host, $port);
-    if (ftp_login($ftp_conn, $username, $password)) {
-      ftp_pasv($ftp_conn, TRUE);
+    if ($ftp_conn = ftp_ssl_connect($host, $port)) {
+      if (ftp_login($ftp_conn, $username, $password)) {
+        ftp_pasv($ftp_conn, TRUE);
 
-      // Send the file.
-      if (ftp_put($ftp_conn, $remote_file, drupal_realpath($file), FTP_ASCII)) {
-        ftp_close($ftp_conn);
-        return TRUE;
+        // Send the file.
+        if (ftp_put($ftp_conn, $remote_file, drupal_realpath($file), FTP_ASCII)) {
+          ftp_close($ftp_conn);
+          return TRUE;
+        }
       }
+      else {
+        watchdog('stanford_webform_helper', 'Login Failed. node: !nid', array('!nid' => $nid));
+      }
+      // Close the connection.
+      ftp_close($ftp_conn);
     }
     else {
-      watchdog('stanford_webform_helper', 'Login Failed. node: !nid', array('!nid' => $nid));
+      watchdog('stanford_webform_helper', 'Unable to connect to %host. node: !nid', array(
+        '%host' => $host,
+        '!nid' => $nid,
+      ));
     }
-    // Close the connection.
-    ftp_close($ftp_conn);
   }
   else {
     require_once 'vendor/autoload.php';
