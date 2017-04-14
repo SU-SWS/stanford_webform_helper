@@ -108,29 +108,7 @@ function stanford_webform_helper_upload_file($file, array $connection_info, $nid
   $password = decrypt(serialize($connection_info['password']));
 
   if ($connection_info['ftp']) {
-    // Establish connection.
-    if ($ftp_conn = ftp_ssl_connect($host, $port, 30)) {
-      ftp_pasv($ftp_conn, TRUE);
-      if (ftp_login($ftp_conn, $username, $password)) {
-
-        // Send the file.
-        if (ftp_put($ftp_conn, $remote_file, drupal_realpath($file), FTP_ASCII)) {
-          ftp_close($ftp_conn);
-          return TRUE;
-        }
-      }
-      else {
-        watchdog('stanford_webform_helper', 'Login Failed. node: !nid', array('!nid' => $nid));
-      }
-      // Close the connection.
-      ftp_close($ftp_conn);
-    }
-    else {
-      watchdog('stanford_webform_helper', 'Unable to connect to %host. node: !nid', array(
-        '%host' => $host,
-        '!nid' => $nid,
-      ));
-    }
+    return stanford_webform_helper_ftp_send_file($host, $username, $password, $dir, $file, $port);
   }
   else {
     require_once 'vendor/autoload.php';
@@ -151,4 +129,59 @@ function stanford_webform_helper_upload_file($file, array $connection_info, $nid
   }
 
   return FALSE;
+}
+
+/**
+ * Upload local file to FTP server using SSL.
+ *
+ * @param string $host
+ *   FTP host url.
+ * @param string $username
+ *   FTP Username.
+ * @param string $password
+ *   FTP Password.
+ * @param string $host_dir
+ *   Path to the destination_directory.
+ * @param string $uri
+ *   File uri.
+ * @param int $port
+ *   Port to use.
+ *
+ * @return bool
+ *   If the upload was successful
+ */
+function stanford_webform_helper_ftp_send_file($host, $username, $password, $host_dir, $uri, $port = 22) {
+  $ftp_server = "ftp://$host";
+
+  $localFileName = drupal_realpath($uri);
+  $remoteFileName = "$host_dir/" . basename($uri);
+
+  $fp = fopen($localFileName, 'r');
+  $ch = curl_init();
+
+  curl_setopt($ch, CURLOPT_URL, $ftp_server . $remoteFileName);
+  curl_setopt($ch, CURLOPT_PORT, $port);
+  curl_setopt($ch, CURLOPT_USERPWD, "$username:$password");
+  curl_setopt($ch, CURLOPT_UPLOAD, 1);
+  curl_setopt($ch, CURLOPT_INFILE, $fp);
+  curl_setopt($ch, CURLOPT_INFILESIZE, filesize($localFileName));
+  // SSL stuff.
+  curl_setopt($ch, CURLOPT_FTP_SSL, CURLOPT_FTPSSLAUTH);
+  curl_setopt($ch, CURLOPT_FTPSSLAUTH, CURLFTPAUTH_TLS);
+  curl_setopt($ch, CURLOPT_VERBOSE, TRUE);
+  curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+
+  curl_exec($ch);
+
+  $error_no = curl_errno($ch);
+  $error_msg = curl_error($ch);
+
+  curl_close($ch);
+  fclose($fp);
+
+  if ($error_no != 0) {
+    watchdog('stanford_webform_helper', t('Error uploading file to ftp server. Message: %message'), array('%message' => $error_msg), WATCHDOG_ERROR);
+    return FALSE;
+  }
+  return TRUE;
 }
