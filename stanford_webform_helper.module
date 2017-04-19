@@ -118,7 +118,7 @@ function stanford_webform_helper_upload_file($file, array $connection_info, $nid
     if ($sftp->login($username, $password)) {
 
       // Send the file.
-      if ($sftp->put($remote_file, file_get_contents($file), NET_SFTP_LOCAL_FILE)) {
+      if ($sftp->put($remote_file, file_get_contents($file))) {
         return TRUE;
       }
     }
