@@ -118,7 +118,7 @@ function stanford_webform_helper_upload_file($file, array $connection_info, $nid
     if ($sftp->login($username, $password)) {
 
       // Send the file.
-      if ($sftp->put($remote_file, file_get_contents($file))) {
+      if ($sftp->put($remote_file, file_get_contents($file), NET_SFTP_LOCAL_FILE)) {
         return TRUE;
       }
     }
@@ -151,36 +151,25 @@ function stanford_webform_helper_upload_file($file, array $connection_info, $nid
  *   If the upload was successful
  */
 function stanford_webform_helper_ftp_send_file($host, $username, $password, $host_dir, $uri, $port = 22) {
-  $ftp_server = "ftp://$host";
+  $connection = ftp_ssl_connect($host, $port, 15);
+  $error = FALSE;
+  $local_file = drupal_realpath($uri);
+  $remote_file = "$host_dir/" . basename($uri);
+  if (ftp_login($connection, $username, $password)) {
+    ftp_pasv($connection, TRUE);
+    // Send the file.
+    if (!ftp_put($connection, $remote_file, $local_file, FTP_ASCII)) {
+      $error = t('Unable to send file');
+    }
+  }
+  else {
+    $error = t('Unable to log into server');
+  }
 
-  $localFileName = drupal_realpath($uri);
-  $remoteFileName = "$host_dir/" . basename($uri);
+  ftp_close($connection);
 
-  $fp = fopen($localFileName, 'r');
-  $ch = curl_init();
-
-  curl_setopt($ch, CURLOPT_URL, $ftp_server . $remoteFileName);
-  curl_setopt($ch, CURLOPT_PORT, $port);
-  curl_setopt($ch, CURLOPT_USERPWD, "$username:$password");
-  curl_setopt($ch, CURLOPT_UPLOAD, 1);
-  curl_setopt($ch, CURLOPT_INFILE, $fp);
-  curl_setopt($ch, CURLOPT_INFILESIZE, filesize($localFileName));
-  // SSL stuff.
-  curl_setopt($ch, CURLOPT_FTP_SSL, CURLOPT_FTPSSLAUTH);
-  curl_setopt($ch, CURLOPT_FTPSSLAUTH, CURLFTPAUTH_TLS);
-  curl_setopt($ch, CURLOPT_VERBOSE, TRUE);
-  curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-
-  curl_exec($ch);
-
-  $error_no = curl_errno($ch);
-  $error_msg = curl_error($ch);
-
-  curl_close($ch);
-  fclose($fp);
-
-  if ($error_no != 0) {
-    watchdog('stanford_webform_helper', t('Error uploading file to ftp server. Message: %message'), array('%message' => $error_msg), WATCHDOG_ERROR);
+  if ($error) {
+    watchdog('stanford_webform_helper', 'Error uploading file to ftp server. Message: %message', array('%message' => $error), WATCHDOG_ERROR);
     return FALSE;
   }
   return TRUE;
