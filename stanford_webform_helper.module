@@ -108,29 +108,7 @@ function stanford_webform_helper_upload_file($file, array $connection_info, $nid
   $password = decrypt(serialize($connection_info['password']));
 
   if ($connection_info['ftp']) {
-    // Establish connection.
-    if ($ftp_conn = ftp_ssl_connect($host, $port, 30)) {
-      if (ftp_login($ftp_conn, $username, $password)) {
-        ftp_pasv($ftp_conn, TRUE);
-
-        // Send the file.
-        if (ftp_put($ftp_conn, $remote_file, drupal_realpath($file), FTP_ASCII)) {
-          ftp_close($ftp_conn);
-          return TRUE;
-        }
-      }
-      else {
-        watchdog('stanford_webform_helper', 'Login Failed. node: !nid', array('!nid' => $nid));
-      }
-      // Close the connection.
-      ftp_close($ftp_conn);
-    }
-    else {
-      watchdog('stanford_webform_helper', 'Unable to connect to %host. node: !nid', array(
-        '%host' => $host,
-        '!nid' => $nid,
-      ));
-    }
+    return stanford_webform_helper_ftp_send_file($host, $username, $password, $dir, $file, $port);
   }
   else {
     require_once 'vendor/autoload.php';
@@ -151,4 +129,48 @@ function stanford_webform_helper_upload_file($file, array $connection_info, $nid
   }
 
   return FALSE;
+}
+
+/**
+ * Upload local file to FTP server using SSL.
+ *
+ * @param string $host
+ *   FTP host url.
+ * @param string $username
+ *   FTP Username.
+ * @param string $password
+ *   FTP Password.
+ * @param string $host_dir
+ *   Path to the destination_directory.
+ * @param string $uri
+ *   File uri.
+ * @param int $port
+ *   Port to use.
+ *
+ * @return bool
+ *   If the upload was successful
+ */
+function stanford_webform_helper_ftp_send_file($host, $username, $password, $host_dir, $uri, $port = 22) {
+  $connection = ftp_ssl_connect($host, $port, 15);
+  $error = FALSE;
+  $local_file = drupal_realpath($uri);
+  $remote_file = "$host_dir/" . basename($uri);
+  if (ftp_login($connection, $username, $password)) {
+    ftp_pasv($connection, TRUE);
+    // Send the file.
+    if (!ftp_put($connection, $remote_file, $local_file, FTP_ASCII)) {
+      $error = t('Unable to send file');
+    }
+  }
+  else {
+    $error = t('Unable to log into server');
+  }
+
+  ftp_close($connection);
+
+  if ($error) {
+    watchdog('stanford_webform_helper', 'Error uploading file to ftp server. Message: %message', array('%message' => $error), WATCHDOG_ERROR);
+    return FALSE;
+  }
+  return TRUE;
 }
