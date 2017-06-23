@@ -17,7 +17,7 @@ function stanford_webform_helper_sftp_form($form, &$form_state, $node) {
 
   $form_state['node'] = $node;
   $sftp = variable_get('stanford_webform_helper_sftp', array());
-dpm($sftp);
+
   $webform_settings = array(
     'ftp' => 0,
     'enabled' => 0,
