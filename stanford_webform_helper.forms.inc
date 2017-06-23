@@ -17,6 +17,7 @@ function stanford_webform_helper_sftp_form($form, &$form_state, $node) {
 
   $form_state['node'] = $node;
   $sftp = variable_get('stanford_webform_helper_sftp', array());
+
   $webform_settings = array(
     'ftp' => 0,
     'enabled' => 0,
@@ -26,12 +27,16 @@ function stanford_webform_helper_sftp_form($form, &$form_state, $node) {
     'directory' => '',
     'filename' => 'webform_[submission:sid]_[submission:date:raw]',
     'port' => '22',
+    'field_order' => array(),
+    'customize_field_order' => 0,
   );
+
   if (isset($sftp[$node->nid])) {
     $webform_settings = $sftp[$node->nid];
   }
 
   $form = array();
+  $form['#tree'] = TRUE;
   $form['enabled'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enable SFTP Upload'),
@@ -46,6 +51,7 @@ function stanford_webform_helper_sftp_form($form, &$form_state, $node) {
       ),
     ),
   );
+
   $form['sftp_settings']['ftp'] = array(
     '#type' => 'checkbox',
     '#title' => t('Use Standard FTP'),
@@ -79,7 +85,7 @@ function stanford_webform_helper_sftp_form($form, &$form_state, $node) {
     '#type' => 'textfield',
     '#title' => t('Remote Directory'),
     '#description' => t('Path on the SFTP server to upload the file. No trailing slash.'),
-    '#default_value' => $webform_settings['directory'],
+    '#default_value' => $webform_settings['directory'] ? $webform_settings['directory'] : '/',
   );
   $form['sftp_settings']['filename'] = array(
     '#type' => 'textfield',
@@ -87,6 +93,43 @@ function stanford_webform_helper_sftp_form($form, &$form_state, $node) {
     '#description' => t('Name of the file to create on the SFTP server excluding the file extension.'),
     '#default_value' => $webform_settings['filename'],
   );
+
+  $form['sftp_settings']['customize_field_order'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Customize csv field order'),
+    '#default_value' => $webform_settings['customize_field_order'],
+  );
+  $form['sftp_settings']['field_order'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Field Order'),
+    '#states' => array(
+      'visible' => array(
+        'input[name*="customize_field_order"]' => array('checked' => TRUE),
+      ),
+    ),
+  );
+
+  $field_order = [];
+  foreach ($node->webform['components'] as $cid => $component) {
+    $field_order[$cid]['key'] = array(
+      '#markup' => $component['form_key'],
+    );
+    $field_order[$cid]['weight'] = array(
+      '#type' => 'weight',
+      '#title' => t('Weight'),
+      '#title_display' => 'invisible',
+      '#default_value' => isset($webform_settings['field_order'][$cid]) ? $webform_settings['field_order'][$cid] : $component['weight'],
+    );
+  }
+
+  uasort($field_order, function ($array1, $array2) {
+    if ($array1['weight']['#default_value'] > $array2['weight']['#default_value']) {
+      return TRUE;
+    }
+    return FALSE;
+  });
+
+  $form['sftp_settings']['field_order'] += $field_order;
   $form['sftp_settings']['token_help'] = array(
     '#theme' => 'token_tree',
     '#token_types' => array('submission'),
@@ -102,7 +145,8 @@ function stanford_webform_helper_sftp_form($form, &$form_state, $node) {
  * SFTP configuration form validation.
  */
 function stanford_webform_helper_sftp_form_validate($form, &$form_state) {
-  $values = $form_state['values'];
+  $values = $form_state['values']['sftp_settings'];
+
   if ($values['enabled']) {
     $original_settings = variable_get('stanford_webform_helper_sftp', array());
     if (isset($original_settings[$form_state['node']->nid])) {
@@ -111,10 +155,10 @@ function stanford_webform_helper_sftp_form_validate($form, &$form_state) {
     $required_fields = array(
       'username' => t('Username'),
       'sftp' => t('SFTP Host'),
-      'directory' => t('Remote Directory'),
       'port' => t('Port'),
       'filename' => t('File Name'),
     );
+
     foreach ($required_fields as $name => $label) {
       if (!$values[$name]) {
         form_set_error($name, t('!label field is required', array('!label' => $label)));
@@ -134,25 +178,33 @@ function stanford_webform_helper_sftp_form_validate($form, &$form_state) {
  * SFTP Configuration form Submit.
  */
 function stanford_webform_helper_sftp_form_submit($form, &$form_state) {
+  $form_values = $form_state['values']['sftp_settings'];
   $sftp = variable_get('stanford_webform_helper_sftp', array());
   $old_password = '';
   if (isset($sftp[$form_state['node']->nid])) {
     $old_password = $sftp[$form_state['node']->nid]['password'];
   }
   $webform_settings = array(
-    'ftp' => $form_state['values']['ftp'],
+    'ftp' => $form_values['ftp'],
     'enabled' => $form_state['values']['enabled'],
-    'username' => $form_state['values']['username'],
+    'username' => $form_values['username'],
     'password' => $old_password,
-    'sftp' => $form_state['values']['sftp'],
-    'port' => $form_state['values']['port'],
-    'directory' => $form_state['values']['directory'],
-    'filename' => $form_state['values']['filename'],
+    'sftp' => $form_values['sftp'],
+    'port' => $form_values['port'],
+    'directory' => ltrim(rtrim($form_values['directory'], ' /'), ' '),
+    'filename' => $form_values['filename'],
+    'customize_field_order' => $form_values['customize_field_order'],
   );
   if ($form_state['values']['password']) {
     $webform_settings['password'] = unserialize(encrypt($form_state['values']['password']));
   }
 
+  foreach ($form_values['field_order'] as &$weight) {
+    $weight = $weight['weight'];
+  }
+  asort($form_values['field_order']);
+
+  $webform_settings['field_order'] = $form_values['field_order'];
   $sftp[$form_state['node']->nid] = $webform_settings;
   variable_set('stanford_webform_helper_sftp', $sftp);
   drupal_set_message(t('Settings Saved'));

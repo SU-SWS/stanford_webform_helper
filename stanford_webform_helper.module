@@ -26,6 +26,54 @@ function stanford_webform_helper_menu() {
 }
 
 /**
+ * Implements hook_theme().
+ */
+function stanford_webform_helper_theme($existing, $type, $theme, $path) {
+  return array(
+    'stanford_webform_helper_sftp_form' => array(
+      'render element' => 'form',
+    ),
+  );
+}
+
+/**
+ * Theme the sftp configuratino form.
+ */
+function theme_stanford_webform_helper_sftp_form(&$vars) {
+  $form = $vars['form'];
+
+  $rows = array();
+  foreach (element_children($form['sftp_settings']['field_order']) as $cid) {
+    $form['sftp_settings']['field_order'][$cid]['weight']['#attributes']['class'] = array('fields-order-table-weight');
+    $rows[] = array(
+      'data' => array(
+        array('class' => array('slide-cross')),
+        drupal_render($form['sftp_settings']['field_order'][$cid]['key']),
+        drupal_render($form['sftp_settings']['field_order'][$cid]['weight']),
+      ),
+      'class' => array('draggable'),
+    );
+  }
+
+  $header = array(
+    '',
+    t('Field Key'),
+    t('Weight'),
+  );
+
+  $form['sftp_settings']['field_order']['order']['#markup'] = theme('table', array(
+    'header' => $header,
+    'rows' => $rows,
+    'attributes' => array('id' => 'fields-order-table'),
+  ));
+
+  $output = drupal_render_children($form);
+  drupal_add_tabledrag('fields-order-table', 'order', 'sibling', 'fields-order-table-weight');
+
+  return $output;
+}
+
+/**
  * Implements hook_node_delete().
  */
 function stanford_webform_helper_node_delete($node) {
@@ -47,16 +95,20 @@ function stanford_webform_helper_webform_submission_insert($node, $submission) {
 
   $csv_data = array();
   $webform = $node->webform;
-  foreach ($submission->data as $component_id => $value) {
-    $form_key = $webform['components'][$component_id]['form_key'];
-    $csv_data[$form_key] = implode('; ', $value);
+  $submission_data = $submission->data;
 
-    if ($webform['components'][$component_id]['type'] == 'file' && $value) {
-      if ($file = file_load(reset($value))) {
+  $components = _stanford_webform_helper_get_weighted_components($node);
+  foreach ($components as $cid) {
+    $form_key = $webform['components'][$cid]['form_key'];
+    $csv_data[$form_key] = implode('; ', $submission_data[$cid]);
+
+    if ($webform['components'][$cid]['type'] == 'file' && $submission_data[$cid]) {
+      if ($file = file_load(reset($submission_data[$cid]))) {
         $csv_data[$form_key] = file_create_url($file->uri);
       }
     }
   }
+
   if (!array_filter($csv_data)) {
     return;
   }
@@ -75,6 +127,33 @@ function stanford_webform_helper_webform_submission_insert($node, $submission) {
     watchdog('stanford_webform_helper', 'Failed uploading csv to SFTP server on webform !nid', array('!nid' => $node->nid), WATCHDOG_ERROR);
   }
   file_unmanaged_delete($file_path);
+}
+
+/**
+ * Get the order of components depending if they are customized or not.
+ *
+ * @param object $node
+ *   Webform node object.
+ *
+ * @return array
+ *   Array of component id's in the correct weighted order.
+ */
+function _stanford_webform_helper_get_weighted_components($node) {
+  $sftp = variable_get('stanford_webform_helper_sftp', array());
+  $components = array();
+  foreach ($node->webform['components'] as $cid => $component) {
+    $components[$cid] = $component['weight'];
+  }
+
+  if ($sftp[$node->nid]['customize_field_order']) {
+    foreach ($sftp[$node->nid]['field_order'] as $cid => $weight) {
+      if (isset($components[$cid])) {
+        $components[$cid] = $weight;
+      }
+    }
+  }
+  asort($components);
+  return array_keys($components);
 }
 
 /**
@@ -99,7 +178,7 @@ function stanford_webform_helper_webform_submission_update($node, $submission) {
  */
 function stanford_webform_helper_upload_file($file, array $connection_info, $nid) {
   $remote = basename($file);
-  $dir = $connection_info['directory'];
+  $dir = $connection_info['directory'] ? $connection_info : '/';
   $remote_file = "$dir/$remote";
 
   $host = $connection_info['sftp'];
@@ -173,4 +252,15 @@ function stanford_webform_helper_ftp_send_file($host, $username, $password, $hos
     return FALSE;
   }
   return TRUE;
+}
+
+/**
+ * Implements hook_webform_component_insert().
+ */
+function stanford_webform_helper_webform_component_insert($component) {
+  $nid = $component['nid'];
+  $sftp = variable_get('stanford_webform_helper_sftp', array());
+  if (isset($sftp[$nid]) && $sftp[$nid]['enabled'] && $sftp[$nid]['customize_field_order']) {
+    drupal_set_message(t('New field added. Please make sure the fields are in the correct order for the csv upload at !link', array('!link' => l("node/$nid/webform/ftp", "node/$nid/webform/ftp"))));
+  }
 }
