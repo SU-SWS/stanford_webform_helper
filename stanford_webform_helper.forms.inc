@@ -195,7 +195,7 @@ function stanford_webform_helper_sftp_form_submit($form, &$form_state) {
     'customize_field_order' => $form_values['customize_field_order'],
   );
   if ($form_values['password']) {
-    $webform_settings['password'] = unserialize(encrypt($form_state['values']['password']));
+    $webform_settings['password'] = unserialize(encrypt($form_values['password']));
   }
 
   foreach ($form_values['field_order'] as &$weight) {
