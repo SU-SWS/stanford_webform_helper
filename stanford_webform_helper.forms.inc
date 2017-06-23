@@ -17,7 +17,7 @@ function stanford_webform_helper_sftp_form($form, &$form_state, $node) {
 
   $form_state['node'] = $node;
   $sftp = variable_get('stanford_webform_helper_sftp', array());
-
+dpm($sftp);
   $webform_settings = array(
     'ftp' => 0,
     'enabled' => 0,
@@ -145,9 +145,8 @@ function stanford_webform_helper_sftp_form($form, &$form_state, $node) {
  * SFTP configuration form validation.
  */
 function stanford_webform_helper_sftp_form_validate($form, &$form_state) {
-  $values = $form_state['values']['sftp_settings'];
-
-  if ($values['enabled']) {
+  $values = &$form_state['values']['sftp_settings'];
+  if ($form_state['values']['enabled']) {
     $original_settings = variable_get('stanford_webform_helper_sftp', array());
     if (isset($original_settings[$form_state['node']->nid])) {
       $original_settings = $original_settings[$form_state['node']->nid];
@@ -170,8 +169,8 @@ function stanford_webform_helper_sftp_form_validate($form, &$form_state) {
     }
   }
 
-  $form_state['values']['directory'] = rtrim($form_state['values']['directory'], '/ ');
-  $form_state['values']['directory'] = rtrim($form_state['values']['directory'], ' ');
+  $values['directory'] = rtrim($values['directory'], '/ ');
+  $values['directory'] = ltrim($values['directory'], ' ');
 }
 
 /**
@@ -191,11 +190,11 @@ function stanford_webform_helper_sftp_form_submit($form, &$form_state) {
     'password' => $old_password,
     'sftp' => $form_values['sftp'],
     'port' => $form_values['port'],
-    'directory' => ltrim(rtrim($form_values['directory'], ' /'), ' '),
+    'directory' => $form_values['directory'],
     'filename' => $form_values['filename'],
     'customize_field_order' => $form_values['customize_field_order'],
   );
-  if ($form_state['values']['password']) {
+  if ($form_values['password']) {
     $webform_settings['password'] = unserialize(encrypt($form_state['values']['password']));
   }
 
