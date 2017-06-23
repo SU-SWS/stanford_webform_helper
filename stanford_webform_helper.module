@@ -100,6 +100,12 @@ function stanford_webform_helper_webform_submission_insert($node, $submission) {
   $components = _stanford_webform_helper_get_weighted_components($node);
   foreach ($components as $cid) {
     $form_key = $webform['components'][$cid]['form_key'];
+
+    if (!isset($submission_data[$cid]) || !$submission_data[$cid]) {
+      $csv_data[$form_key] = '';
+      continue;
+    }
+
     $csv_data[$form_key] = implode('; ', $submission_data[$cid]);
 
     if ($webform['components'][$cid]['type'] == 'file' && $submission_data[$cid]) {
