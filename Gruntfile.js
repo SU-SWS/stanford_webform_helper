@@ -80,7 +80,7 @@ module.exports = function(grunt) {
       },
       dist: {
         files: {
-          'css/stanford_module_example.css': 'scss/stanford_module_example.scss'
+          'css/stanford_webform_helper.css': 'scss/stanford_webform_helper.scss'
         }
       }
     },

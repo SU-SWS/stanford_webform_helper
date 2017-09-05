@@ -1,0 +1,18 @@
+.webform-client-form {
+
+  .webform-component-radios {
+
+    .form-item {
+      display: inline-block;
+    }
+
+    input.form-radio {
+      float: left;
+    }
+
+    label.option {
+      float: right;
+      margin-left: 10px;
+    }
+  }
+}

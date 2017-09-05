@@ -1,0 +1,14 @@
+.webform-client-form .webform-component-radios .form-item {
+  display: inline-block;
+}
+
+.webform-client-form .webform-component-radios input.form-radio {
+  float: left;
+}
+
+.webform-client-form .webform-component-radios label.option {
+  float: right;
+  margin-left: 10px;
+}
+
+/*# sourceMappingURL=stanford_webform_helper.css.map */
