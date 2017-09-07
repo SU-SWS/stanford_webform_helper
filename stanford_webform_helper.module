@@ -270,3 +270,12 @@ function stanford_webform_helper_webform_component_insert($component) {
     drupal_set_message(t('New field added. Please make sure the fields are in the correct order for the csv upload at !link', array('!link' => l("node/$nid/webform/ftp", "node/$nid/webform/ftp"))));
   }
 }
+
+/**
+ * Implements hook_form_alter().
+ */
+function stanford_webform_helper_form_alter(&$form, &$form_state, $form_id) {
+  if (strpos($form_id, 'webform_client_form') !== FALSE) {
+    $form['#attached']['css'][] = drupal_get_path('module', 'stanford_webform_helper') . '/css/stanford_webform_helper.css';
+  }
+}
