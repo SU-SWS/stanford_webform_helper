@@ -1,6 +1,6 @@
 Stanford Module
 
-Version 7.x-1.0                                                       YYYY-MM-DD
+Version 7.x-1.0                                                       2017-10-11
 --------------------------------------------------------------------------------
 
 - Initial Release

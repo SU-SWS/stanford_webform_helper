@@ -1,7 +1,7 @@
 name = Stanford Webform Helper
 description = Adds additional functionality to webforms
 core = 7.x
-version = 7.x-1.x
+version = 7.x-1.0
 
 dependencies[] = encrypt
 dependencies[] = webform
